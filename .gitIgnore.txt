@@ -1,3 +1,6 @@
-.settings/ 
-bin/ 
-.gitignore
+/.metadata/
+/.recommenders/
+
+.settings/
+/bin/
+
