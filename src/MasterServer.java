@@ -12,13 +12,14 @@ public class MasterServer {
 	    System.err.println("Usage: java MasterServer <port number>");
 	    System.exit(1);
 	}
-	
+
 	int portNumber = Integer.parseInt(args[0]);
 	boolean listening = true;
+	int threadID = 100;
 
 	try (ServerSocket serverSocket = new ServerSocket(portNumber)) {
 	    while (listening) {
-		new multiServerThread(serverSocket.accept()).start();
+		new multiServerThread(serverSocket.accept(), threadID++).start();
 	    }
 	} catch (IOException e) {
 	    System.err.println("Could not listen on port " + portNumber);
