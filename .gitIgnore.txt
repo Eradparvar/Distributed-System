@@ -1,6 +1,6 @@
 /.metadata/
 /.recommenders/
 
-.settings/
-/bin/
-
+.settings/ 
+bin/ 
+.gitIgnore
