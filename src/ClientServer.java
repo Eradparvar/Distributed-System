@@ -33,8 +33,8 @@ public class ClientServer {
 	    Task clientTask = new Task("image", 2); // create new task to send
 	    out.writeObject(clientTask); // sends Task to MasterServer
 
-	    String result = (String) in.readObject();// Receives success and name of message from server
-	    System.out.println(result);
+	    Task taskResult = (Task) in.readObject();// Receives success and name of message from server
+	    System.out.println(taskResult);
 
 	} catch (UnknownHostException e) {
 	    System.err.println("Don't know about host " + hostName);

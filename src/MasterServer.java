@@ -10,11 +10,12 @@ public class MasterServer {
 
     public static void main(String[] args) throws IOException {
 	// MASTER ---> SLAVE
+	// will have to create a method where it all gets set up by itself ****
 	// need to hardcode host and port numbers *****----*****
 	Socket socketSlave01 = null; // = new Socket(host, port);
 	Socket socketSlave02 = null; // = new Socket(host, port);
 	Socket socketSlave03 = null;// = new Socket(host, port);
-	boolean listening = true;
+
 	if (args.length != 1) {
 	    System.err.println("Usage: java MasterServer <port number>");
 	    System.exit(1);
@@ -22,7 +23,7 @@ public class MasterServer {
 
 	int portNumber = Integer.parseInt(args[0]);
 	int slaveToRouteConnection;
-
+	boolean listening = true;
 	while (listening) {
 	    ServerSocket serverSocket = new ServerSocket(portNumber);
 	    // Finds which slave to route connection to
@@ -33,12 +34,6 @@ public class MasterServer {
 	}
 
     }
-
-    // ArrayList<Thread> threads = new ArrayList<Thread>();
-    // for (int ID = 0; ID < THREADS; ID++) {
-    // Thread client = new Thread(new MasterServerThread(serverSocket, ID));
-    // client.start();
-    // threads.add(client);
 
     // to to---**
     // find slave with least connection
@@ -52,27 +47,26 @@ public class MasterServer {
 
     // find the slave with the least connections
     private static int findLeastConnection(Socket slave01, Socket slave02, Socket slave03) throws IOException {
-	ObjectOutputStream outSlave01, outSlave02, outSlave03;
-	ObjectInputStream inSlave01, inSlave02, inSlave03;
+	// Master --> slave
 
-	outSlave01 = new ObjectOutputStream(slave01.getOutputStream());
-	outSlave02 = new ObjectOutputStream(slave02.getOutputStream());
-	outSlave03 = new ObjectOutputStream(slave03.getOutputStream());
+	ObjectOutputStream outSlave01 = new ObjectOutputStream(slave01.getOutputStream());
+	ObjectOutputStream outSlave02 = new ObjectOutputStream(slave02.getOutputStream());
+	ObjectOutputStream outSlave03 = new ObjectOutputStream(slave03.getOutputStream());
 	// Receive from slave
-	inSlave01 = new ObjectInputStream(slave01.getInputStream());
-	inSlave02 = new ObjectInputStream(slave02.getInputStream());
-	inSlave03 = new ObjectInputStream(slave03.getInputStream());
+	ObjectInputStream inSlave01 = new ObjectInputStream(slave01.getInputStream());
+	ObjectInputStream inSlave02 = new ObjectInputStream(slave02.getInputStream());
+	ObjectInputStream inSlave03 = new ObjectInputStream(slave03.getInputStream());
 
 	int slave01Connections, slave02Connections, slave03Connections;
 	int result = -1;
 
 	try {
 	    outSlave01.writeObject("Slave01 many connections do you have?");
-	    slave01Connections = (int) inSlave01.readObject();
+	    slave01Connections = inSlave01.readInt();
 	    outSlave02.writeObject("Slave02 many connections do you have?");
-	    slave02Connections = (int) inSlave02.readObject();
+	    slave02Connections = inSlave02.readInt();
 	    outSlave03.writeObject("Slave03 many connections do you have?");
-	    slave03Connections = (int) inSlave03.readObject();
+	    slave03Connections = inSlave03.readInt();
 
 	    // finds the least connections of the 3 slaves
 	    if (slave01Connections < slave02Connections && slave01Connections < slave03Connections)
@@ -85,13 +79,13 @@ public class MasterServer {
 	    // tie, to break the tie we use roundRobbin
 	    if (roundRobbinCounter == 1) {
 		result = 1;
-		roundRobbinCounter++;
+		incrementRoundRobbinCounter();
 	    } else if (roundRobbinCounter == 2) {
 		result = 2;
-		roundRobbinCounter++;
+		incrementRoundRobbinCounter();
 	    } else if (roundRobbinCounter == 3) {
 		result = 3;
-		roundRobbinCounter = 1;
+		setRoundRobbinCounterToOne();
 	    }
 	} catch (IOException | ClassNotFoundException e) {
 	    // TODO Auto-generated catch block
@@ -99,6 +93,18 @@ public class MasterServer {
 	}
 
 	return result;
+
+    }
+
+    // RoundRobbinCounter is accessed by multiple threads at the same time.
+    // synchronized makes the object threads safe.
+    private synchronized static void incrementRoundRobbinCounter() {
+	roundRobbinCounter++;
+
+    }
+
+    private synchronized static void setRoundRobbinCounterToOne() {
+	roundRobbinCounter = 1;
 
     }
 }
