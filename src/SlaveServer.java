@@ -4,45 +4,59 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+
+import org.javatuples.Pair;
 
 public class SlaveServer {
-    public static void main(String[] args) throws IOException {
-	int numOfConncetions = 0;
-	// Hardcode in Port here if required
-	// args = new String[] {"30121"};
+    static ArrayList<Thread> tasks = new ArrayList<>();
 
-	if (args.length != 1) {
-	    System.err.println("Usage: java Slave <port number>");
-	    System.exit(1);
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+	
+	try {
+
+	    // Hardcode in Port here if required
+	    args = new String[] { "102", "202" };
+	    int portNumberToListenForTask = Integer.parseInt(args[0]);
+	    int portNumberToListenForNumConnection = Integer.parseInt(args[1]);
+
+	    if (args.length != 2) {
+		System.err.println("Usage: java SlaveServer <port number>");
+		System.exit(1);
+	    }
+	    System.out.println("SlaveServer Running");
+	    ServerSocket serverSocketForTask = new ServerSocket(portNumberToListenForTask);
+	    ServerSocket serverSocketForNumConnection = new ServerSocket(portNumberToListenForNumConnection);
+	    System.out.println("SlaveServer: created 1)serverSocketForTask and 2)serverSocketForNumConnection");
+	    LinkedList<Pair<Socket, Task>> tasksQueue = new LinkedList<>();
+	    System.out.println("Started  SlaveServerHowManyConnectionsSocketThreads");
+	    new Thread(new SlaveServerHowManyConnectionsSocketThreads(serverSocketForNumConnection, tasksQueue))
+		    .start();
+	    System.out.println("Started SlaveServerProcessTasksThread");
+	    new Thread(new SlaveServerProcessTasksThread(tasksQueue)).start();
+	    // Accepts connection and creates a thread to deal with task
+	    boolean run = true;
+	    while (run) {
+		System.out.println("SalveServer entering while: wiating for client reqest");
+		Socket clientsTaskSocket = serverSocketForTask.accept();
+		System.out.println("SlaveServer got client Socket");
+		new Thread(new SlaveServerAcceptsIncommingMessegesThread(clientsTaskSocket, tasksQueue)).start();
+	    }
+	} catch (Exception e) {
+	    // TODO: handle exception
 	}
 
-	int portNumber = Integer.parseInt(args[0]);
-
-	// portNumber need to enable way to set the values for here and next portnumber
-	// Connects to master to send how many connections it currently has
-	try {// to connect to master for current connections
-	    ServerSocket serverSocket = new ServerSocket(portNumber);
-	    Socket socket = serverSocket.accept();
-	    ObjectInputStream inFromMaster = new ObjectInputStream(socket.getInputStream());// Receives from MasteServer
-	    Object masterReqest = (Object) inFromMaster.readObject();// Master asks how many connections do you have
-	    // Slave ans master how many onncetions it has
-	    ObjectOutputStream outToServer = new ObjectOutputStream(socket.getOutputStream());// send to masterServer
-	    outToServer.writeInt(numOfConncetions);
-
-	} catch (IOException | ClassNotFoundException e) {
-	    // System.err.println("Could not listen on port " + portNumber);
-	    System.exit(-1);
-	}
-
-	int queLength = 0;
-	// To do keep track of number of connections and possibly create a thread for
-	// it****
-	ArrayList<Thread> threads = new ArrayList<>();
-	
-	
     }
+
+    
 
 }

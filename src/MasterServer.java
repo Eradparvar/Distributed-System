@@ -4,17 +4,19 @@ import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+
+import javax.print.attribute.standard.Media;
 
 public class MasterServer {
-    static int roundRobbinCounter = 1;
 
     public static void main(String[] args) throws IOException {
-	// MASTER ---> SLAVE
-	// will have to create a method where it all gets set up by itself ****
-	// need to hardcode host and port numbers *****----*****
-	Socket socketSlave01 = null; // = new Socket(host, port);
-	Socket socketSlave02 = null; // = new Socket(host, port);
-	Socket socketSlave03 = null;// = new Socket(host, port);
+
+	// Hardcode in IP and Port here if required
+	args = new String[] { "7" };
 
 	if (args.length != 1) {
 	    System.err.println("Usage: java MasterServer <port number>");
@@ -24,87 +26,31 @@ public class MasterServer {
 	int portNumber = Integer.parseInt(args[0]);
 	int slaveToRouteConnection;
 	boolean listening = true;
-	while (listening) {
-	    ServerSocket serverSocket = new ServerSocket(portNumber);
-	    // Finds which slave to route connection to
-	    slaveToRouteConnection = findLeastConnection(socketSlave01, socketSlave02, socketSlave03);
-	    // creates thread to deal with client
-	    new MasterServerThread(serverSocket, slaveToRouteConnection);
-
-	}
-
-    }
-
-    // to to---**
-    // find slave with least connection
-    // create a thread to pass the task to the slave to do
-    // thread recives task
-    // pass task to the server with the least connections
-    // slave class ---**
-    // accsept task
-    // acopmpish task
-    // send it back to client
-
-    // find the slave with the least connections
-    private static int findLeastConnection(Socket slave01, Socket slave02, Socket slave03) throws IOException {
-	// Master --> slave
-
-	ObjectOutputStream outSlave01 = new ObjectOutputStream(slave01.getOutputStream());
-	ObjectOutputStream outSlave02 = new ObjectOutputStream(slave02.getOutputStream());
-	ObjectOutputStream outSlave03 = new ObjectOutputStream(slave03.getOutputStream());
-	// Receive from slave
-	ObjectInputStream inSlave01 = new ObjectInputStream(slave01.getInputStream());
-	ObjectInputStream inSlave02 = new ObjectInputStream(slave02.getInputStream());
-	ObjectInputStream inSlave03 = new ObjectInputStream(slave03.getInputStream());
-
-	int slave01Connections, slave02Connections, slave03Connections;
-	int result = -1;
-
+	SlaveList slavesList = new SlaveList();// stores the slave socket class info
 	try {
-	    outSlave01.writeObject("Slave01 many connections do you have?");
-	    slave01Connections = inSlave01.readInt();
-	    outSlave02.writeObject("Slave02 many connections do you have?");
-	    slave02Connections = inSlave02.readInt();
-	    outSlave03.writeObject("Slave03 many connections do you have?");
-	    slave03Connections = inSlave03.readInt();
+	    ServerSocket serverSocket = new ServerSocket(portNumber);
+	    System.out.println("MasterServer created serverSocket on port " + portNumber);
+	    while (listening) {
+		System.out.println("MaterServer about to find slave with least connection");
+		// Finds which slave to route connection to
+		slaveToRouteConnection = slavesList.findLeastConnection();
+		System.out.println("Found slave with least connection. Slave#" + slaveToRouteConnection);
 
-	    // finds the least connections of the 3 slaves
-	    if (slave01Connections < slave02Connections && slave01Connections < slave03Connections)
-		result = 1;
-	    else if (slave02Connections < slave01Connections && slave02Connections < slave03Connections)
-		result = 2;
-	    else if (slave03Connections < slave01Connections && slave03Connections < slave02Connections)
-		result = 3;
-	    else
-	    // tie, to break the tie we use roundRobbin
-	    if (roundRobbinCounter == 1) {
-		result = 1;
-		incrementRoundRobbinCounter();
-	    } else if (roundRobbinCounter == 2) {
-		result = 2;
-		incrementRoundRobbinCounter();
-	    } else if (roundRobbinCounter == 3) {
-		result = 3;
-		setRoundRobbinCounterToOne();
+		System.out.println("MasterServer now waiting for client reqest");
+		// accepts clients request
+		Socket clientSocket = serverSocket.accept();
+		System.out.println("MasterServer recived client reqest :)");
+		// creates thread to deal with client
+		System.out.println("MasterServer about to create a thread to deal with client");
+		new Thread(new MasterServerThread(clientSocket, slaveToRouteConnection, slavesList)).start();
+		System.out.println(
+			"MasterServer created MasterServerThread to deal with client: See log MasterServerThread for more details");
+
 	    }
-	} catch (IOException | ClassNotFoundException e) {
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
+	} catch (Exception e) {
+	    // TODO: handle exception
 	}
 
-	return result;
-
     }
 
-    // RoundRobbinCounter is accessed by multiple threads at the same time.
-    // synchronized makes the object threads safe.
-    private synchronized static void incrementRoundRobbinCounter() {
-	roundRobbinCounter++;
-
-    }
-
-    private synchronized static void setRoundRobbinCounterToOne() {
-	roundRobbinCounter = 1;
-
-    }
 }

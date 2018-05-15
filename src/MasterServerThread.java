@@ -1,88 +1,72 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
-import javax.lang.model.SourceVersion;
-
+//deals with clients request
+//send the Task to slave
 public class MasterServerThread implements Runnable {
-    // Master
-    Socket slave01 = null; // new Socket(host, port);
-    Socket slave02 = null; // new Socket(host, port);
-    Socket slave03 = null; // new Socket(host, port);
+    private final static Logger LOGGER = Logger.getLogger("SlaveServer_Log");
 
-    private ServerSocket serverSocket;
-    private int id;
+    private Socket clientSocket;
     private int slaveToRouteConnection;
     private Task taskToRoute;
+    private SlaveList slaveList;
 
-    // A reference to the server socket is passed in, all threads share it
-    public MasterServerThread(ServerSocket serverSocket, int slaveToRouteConnection) {
-	this.serverSocket = serverSocket;
+    public MasterServerThread(Socket clientSocket, int slaveToRouteConnection, SlaveList slavesList) {
+	this.clientSocket = clientSocket;
 	this.slaveToRouteConnection = slaveToRouteConnection;
+	this.slaveList = slavesList;
     }
 
     @Override
     public void run() {
-	Task clientsTask;
+	setupLogger();
 	try {
-	    // Accepts task from client. Clients request is saved in clientsTask
-	    Socket clientSocket = serverSocket.accept();
-	    ObjectInputStream inputFromClient = new ObjectInputStream(clientSocket.getInputStream());
-	    clientsTask = (Task) inputFromClient.readObject();
-	    boolean taskCompletionStatus = false;
-	    Task finishedTask;
-	    // pass the task to the server with the least connections
-	    switch (slaveToRouteConnection) {
-	    case 1:
-		ObjectOutputStream outputToSlave01 = new ObjectOutputStream(slave01.getOutputStream());
-		outputToSlave01.writeObject(taskToRoute);
-		// Receives confirmation from slave that the task was successful
-		ObjectInputStream inputFromSlave01 = new ObjectInputStream(slave01.getInputStream());
-		finishedTask = (Task) inputFromSlave01.readObject();
-		finishedTask.setWhichSlaveDidTask(1);
-		System.out.println("Slave 1 - Task Status: " + taskCompletionStatus);
-		break;
+	    boolean run = true;
+	    while (run) {
+		// from client
+		ObjectInputStream inputFromClient = new ObjectInputStream(clientSocket.getInputStream());
+		taskToRoute = (Task) inputFromClient.readObject();
+		LOGGER.finest("MasterServer -- MasterServerThread: recived task from client");
 
-	    case 2:
-		ObjectOutputStream outputToSlave02 = new ObjectOutputStream(slave02.getOutputStream());
-		outputToSlave02.writeObject(taskToRoute);
-		// Receives confirmation from slave that the task was successful
-		ObjectInputStream inputFromSlave02 = new ObjectInputStream(slave02.getInputStream());
-		finishedTask = (Task) inputFromSlave02.readObject();
-		finishedTask.setWhichSlaveDidTask(2);
-		System.out.println("Slave 2 - Task Status: " + taskCompletionStatus);
-		break;
+		// send taskToRoute to slave
+		ObjectOutputStream outputToSlave = new ObjectOutputStream(
+			slaveList.getTaskSocketSlaveNum(slaveToRouteConnection).getOutputStream());
+		taskToRoute.setWhichSlaveHasTask(slaveToRouteConnection);
+		LOGGER.finest("MasterServerThread: about to send task to slave");
+		outputToSlave.writeObject(clientSocket);
+		LOGGER.finest("MasterServerThread: sent task to slave :)");
 
-	    case 3:
-		ObjectOutputStream outputToSlave03 = new ObjectOutputStream(slave03.getOutputStream());
-		outputToSlave03.writeObject(taskToRoute);
-		// Receives confirmation from slave that the task was successful
-		ObjectInputStream inputFromSlave03 = new ObjectInputStream(slave03.getInputStream());
-		finishedTask = (Task) inputFromSlave03.readObject();
-		finishedTask.setWhichSlaveDidTask(3);
-		System.out.println("Slave 3 - Task Status: " + taskCompletionStatus);
-		break;
-
-	    default:
-		System.err.println("Error: Not valid -slaveToRouteConnection- value  ");
-		break;
 	    }
+
 	} catch (IOException | ClassNotFoundException e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
+	} catch (Exception e) {
 	    // TODO Auto-generated catch block
 	    e.printStackTrace();
 	}
 
     }
+    private static void setupLogger() {
+   	LOGGER.setLevel(Level.ALL);
+   	try {
+   	    FileHandler fhandler = new FileHandler("SlaveServerLogfile.txt");
+   	    SimpleFormatter sformatter = new SimpleFormatter();
+   	    fhandler.setFormatter(sformatter);
+   	    LOGGER.addHandler(fhandler);
 
-    // ArrayList<Thread> threads = new ArrayList<Thread>();
-    // for (int ID = 0; ID < THREADS; ID++) {
-    // Thread client = new Thread(new MasterServerThread(serverSocket, ID));
-    // client.start();
-    // threads.add(client);
+   	} catch (IOException ex) {
+   	    LOGGER.log(Level.SEVERE, ex.getMessage(), ex);
+   	} catch (SecurityException ex) {
+   	    LOGGER.log(Level.SEVERE, ex.getMessage(), ex);
+   	}
+       }
+    
 
 }
