@@ -1,62 +1,94 @@
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
-import org.javatuples.Pair;
-
-public class SlaveServer {
-    static ArrayList<Thread> tasks = new ArrayList<>();
-
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-	
-	try {
+public class SlaveServer
+{
+    public static void main(String[] args) throws IOException, ClassNotFoundException
+    {
 
 	    // Hardcode in Port here if required
-	    args = new String[] { "102", "202" };
-	    int portNumberToListenForTask = Integer.parseInt(args[0]);
-	    int portNumberToListenForNumConnection = Integer.parseInt(args[1]);
+	    args = new String[] { "localhost", "102"};
 
-	    if (args.length != 2) {
-		System.err.println("Usage: java SlaveServer <port number>");
-		System.exit(1);
+	    if (args.length != 2)
+	    {
+	    	System.err.println("Usage: java ClientServer <host name> <port number>");
+			System.exit(1);
 	    }
-	    System.out.println("SlaveServer Running");
-	    ServerSocket serverSocketForTask = new ServerSocket(portNumberToListenForTask);
-	    ServerSocket serverSocketForNumConnection = new ServerSocket(portNumberToListenForNumConnection);
-	    System.out.println("SlaveServer: created 1)serverSocketForTask and 2)serverSocketForNumConnection");
-	    LinkedList<Pair<Socket, Task>> tasksQueue = new LinkedList<>();
-	    System.out.println("Started  SlaveServerHowManyConnectionsSocketThreads");
-	    new Thread(new SlaveServerHowManyConnectionsSocketThreads(serverSocketForNumConnection, tasksQueue))
-		    .start();
-	    System.out.println("Started SlaveServerProcessTasksThread");
-	    new Thread(new SlaveServerProcessTasksThread(tasksQueue)).start();
-	    // Accepts connection and creates a thread to deal with task
+	    
+		
+	    ArrayList<Socket> socks = new ArrayList<>();
+	    ArrayList<Thread> tasks = new ArrayList<>();
+	    
+	    
+	    Thread runtasks = new Thread(new SlaveServerProcessTasksThread(socks, tasks));
+	    runtasks.start();
+	   
 	    boolean run = true;
-	    while (run) {
-		System.out.println("SalveServer entering while: wiating for client reqest");
-		Socket clientsTaskSocket = serverSocketForTask.accept();
-		System.out.println("SlaveServer got client Socket");
-		new Thread(new SlaveServerAcceptsIncommingMessegesThread(clientsTaskSocket, tasksQueue)).start();
-	    }
-	} catch (Exception e) {
-	    // TODO: handle exception
-	}
-
+	    while (run)
+	    {
+	    	try//(//ServerSocket serverSocketForTask = new ServerSocket(Integer.parseInt(args[0]));)
+			{
+	    		Socket s = new Socket(args[0], Integer.parseInt(args[1]));
+	    		
+		    	System.out.println("listening"); // TODO for testing purposes
+		    	
+				//Socket s = serverSocketForTask.accept();
+				
+				ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+				System.out.println("got output"); // TODO for testing purposes
+				ObjectInputStream inputFromClient = new ObjectInputStream(s.getInputStream());
+				System.out.println("got input"); // TODO for testing purposes
+				
+				
+				System.out.println("read object"); // TODO for testing purposes
+				Object temp = inputFromClient.readObject();
+				if(temp instanceof Thread)
+				{
+					System.out.println("add thread"); // TODO for testing purposes
+					//Socket tasksock = (Socket) inputFromClient.readObject();
+					synchronized(tasks)
+					{
+						tasks.add((Thread) temp);
+					}
+					System.out.println("add sock"); // TODO for testing purposes
+					synchronized(socks)
+					{
+						socks.add(s);
+					}
+				}
+				else
+				{
+					System.out.println("get least"); // TODO for testing purposes
+					synchronized(tasks)
+					{
+						out.writeObject(tasks.size());
+					}
+				}
+		    }
+	    	catch (Exception e)
+			{
+			    // TODO: handle exception
+				e.printStackTrace();
+				System.exit(1);
+			}
+		}
+	    
+		try
+		{
+			for(int i=0; i<socks.size(); i++)
+			{
+				socks.get(i).close();
+			}
+		}
+		catch (Exception e)
+		{
+		    // TODO Auto-generated catch block
+		    e.printStackTrace();
+		}
     }
-
-    
-
 }

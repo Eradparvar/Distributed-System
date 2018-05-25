@@ -1,43 +1,62 @@
+
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
 
-import org.javatuples.Pair;
 
-//Process tasks on tasksQueue
-public class SlaveServerProcessTasksThread implements Runnable {
+public class SlaveServerProcessTasksThread implements Runnable
+{
 
-    private LinkedList<Pair<Socket, Task>> tasksQueue;
+    private ArrayList<Socket> socks;
+    private ArrayList<Thread> threads;
 
-    public SlaveServerProcessTasksThread(LinkedList<Pair<Socket, Task>> tasksQueue) {
-	this.tasksQueue = tasksQueue;
+    public SlaveServerProcessTasksThread(ArrayList<Socket> socks, ArrayList<Thread> threads)
+    {
+    	this.socks = socks;
+    	this.threads = threads;
     }
 
     @Override
-    public void run() {
-	boolean running = true;
-	while (running) {
-	    while (!tasksQueue.isEmpty()) {
-		try {
-		    Pair<Socket, Task> clientJob = tasksQueue.remove();
-		    Task clientsTaskReqest = (Task) clientJob.getValue1();
-		    clientsTaskReqest.startTask();
-		    // send Task completion status to client
-		    Socket clientsocket = (Socket) clientJob.getValue0();
-		    ObjectOutputStream outputToClient = new ObjectOutputStream(clientsocket.getOutputStream());
-		    outputToClient.writeObject(clientJob);
-		} catch (IOException e) {
-		    // TODO Auto-generated catch block
-		    e.printStackTrace();
+    public void run() 
+    {
+		boolean running = true;
+		while (running) 
+		{
+		    while (!threads.isEmpty()) 
+		    {
+				try 
+				{
+					Thread t = threads.get(0);
+				    t.run();
+				    
+					Socket s = socks.get(0);
+				    ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
+				    
+				    t.join();
+				    synchronized(threads)
+				    {
+				    	threads.remove(0);
+				    }
+				    synchronized(socks)
+				    {
+				    	socks.remove(0);
+				    }
+				    
+				    // send Task completion status to client
+				    out.writeObject(t);
+				} 
+				catch (IOException e) 
+				{
+				    // TODO Auto-generated catch block
+				    e.printStackTrace();
+				} 
+				catch (InterruptedException e) 
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+		    }
 		}
-
-	    }
-	}
-
     }
 }

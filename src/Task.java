@@ -1,43 +1,41 @@
+
 import java.io.Serializable;
 
-import javax.swing.Painter;
-
-public class Task implements Serializable {
-    private int jobTime;
+public class Task extends Thread implements Serializable
+{
+	private static final long serialVersionUID = 1L;
+	private int jobTime;
     private String taskName;
     private String taskStatus = "TASK NOT COMPLETE";//
     private int slaveNumber = -1;
 
     // constructor is passed the job name and the jobTime (seconds)
-    public Task(String name, int jobLengthTime) {
-	this.jobTime = jobLengthTime * 1000;
-	this.taskName = name;
-    }
-
-    public boolean startTask() {
-	try {
-	    System.out.println("Task: " + taskName + " Started");
-	    Thread.sleep(jobTime);
-	    taskStatus = "TASK COMPLETE";
-	    System.out.println("Task: " + taskName + " Complete");
-	    } catch (InterruptedException e) {
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	}
-	return false;
-
-    }
-
-    public void setWhichSlaveHasTask(int slaveNumber) {
-	this.slaveNumber = slaveNumber;
-    }
-
-    public String getTaskStatus() {
-	return taskStatus;
+    public Task(String name, int jobLengthTime)
+    {
+		this.jobTime = jobLengthTime * 1000;
+		this.taskName = name;
     }
 
     @Override
-    public String toString() {
+    public void run()
+    {
+    	try
+    	{
+		    System.out.println("Task: " + taskName + " Started");
+		    Thread.sleep(jobTime);
+		    taskStatus = "TASK COMPLETE";
+		    System.out.println("Task: " + taskName + " Complete");
+		}
+    	catch (InterruptedException e)
+    	{
+		    // TODO Auto-generated catch block
+		    e.printStackTrace();
+		}
+    }
+    
+    @Override
+    public String toString()
+    {
 	return "Job name: " + taskName + "Task Status: " + taskStatus + " -- Time: " + jobTime + "Done by slave number "
 		+ slaveNumber;
     }
