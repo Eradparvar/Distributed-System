@@ -27,25 +27,26 @@ public class SlaveServer {
 	// this while loop keeps getting tasks and adding them to the list, or getting
 	// requests for the number of tasks.
 	boolean runSlaveServer = true;
-	while (runSlaveServer) {
-	    try // should this be outside the while loop?
+	    while (runSlaveServer) {
+	try // should this be outside the while loop?
 
-	    {
-		Socket slaveSocket = new Socket(args[0], Integer.parseInt(args[1]));
+	{
+	    Socket slaveSocket = new Socket(args[0], Integer.parseInt(args[1]));
+	    System.out.println("listening for master"); // TODO for testing purposes
 
-		System.out.println("listening"); // TODO for testing purposes
-
-		ObjectOutputStream out = new ObjectOutputStream(slaveSocket.getOutputStream()); // for sending the
-												// number of tasks
-		// to MasterServerThread
-		System.out.println("got outputStream"); // TODO for testing purposes
-		ObjectInputStream inputFromClient = new ObjectInputStream(slaveSocket.getInputStream()); // for getting
-													 // stuff from
-		// MasterServerThread
-		System.out.println("got inputStream"); // TODO for testing purposes
-
+	    ObjectOutputStream outputToMaster = new ObjectOutputStream(slaveSocket.getOutputStream()); // for sending
+												       // the
+	    // number of tasks (me- or
+	    // completed tasks)
+	    // to MasterServerThread
+	    System.out.println("got outputStream"); // TODO for testing purpose
+	    ObjectInputStream inputFromMaster = new ObjectInputStream(slaveSocket.getInputStream()); // for getting
+												     // stuff from
+	    // MasterServerThread
+	    System.out.println("got inputStream"); // TODO for testing purposes
+	    
 		System.out.println("reading object"); // TODO for testing purposes
-		Object temp = inputFromClient.readObject(); // get a object from MasterServerThread
+		Object temp = inputFromMaster.readObject(); // get a object from MasterServerThread
 		if (temp instanceof Thread) // if the object is a task
 		{
 		    System.out.println("add thread"); // TODO for testing purposes
@@ -60,16 +61,17 @@ public class SlaveServer {
 		{
 		    System.out.println("get least"); // TODO for testing purposes
 		    synchronized (tasks) {
-			out.writeObject(tasks.size()); // send the number of tasks
+			outputToMaster.writeObject(tasks.size()); // send the number of tasks
 		    }
 		    System.out.println("Done get least");
 		}
-	    } catch (Exception e) {
-		// TODO: handle exception
-		e.printStackTrace();
-		System.exit(1);
-	    }
-	}
+	    
+	} catch (Exception e) {
+	    // TODO: handle exception
+	    e.printStackTrace();
+	    System.exit(1);
+	}}
+
 	try {
 	    // the following for loop closes resource leaks
 	    for (int i = 0; i < socksDir.size(); i++) {

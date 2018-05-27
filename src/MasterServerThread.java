@@ -21,38 +21,42 @@ public class MasterServerThread implements Runnable {
     @Override
     public void run() {
 	try {
-	    ObjectOutputStream outputToClient = new ObjectOutputStream(clientSocket.getOutputStream()); // used to send things
-												// to client
+	    ObjectOutputStream outputToClient = new ObjectOutputStream(clientSocket.getOutputStream()); // used to send
+													// things
+	    // to client
 	    ObjectInputStream inputFromClient = new ObjectInputStream(clientSocket.getInputStream()); // used to get
 												      // things from
 												      // client
 
 	    boolean run = true;
 	    while (run) {
+		System.out.println("running"); // TODO for testing purposes
 		// the following line waits until the client sends a task
 		task = (Thread) inputFromClient.readObject();
-		
 		System.out.println("read task"); // TODO for testing purposes
 
 		int slaveNumWithLeastCon = findLeastConnection(); // 'a' will be the task with fewest tasks
-		ObjectOutputStream out = new ObjectOutputStream(slaveSocketsList.get(slaveNumWithLeastCon).getOutputStream()); // used to send things
-											 // to slave #'a'
-		System.out.println("read out"); // TODO for testing purposes
-		ObjectInputStream in = new ObjectInputStream(slaveSocketsList.get(slaveNumWithLeastCon).getInputStream()); // used to get things from
-											     // slave #'a'
+		
+		ObjectOutputStream outputToSlave = new ObjectOutputStream(
+			slaveSocketsList.get(slaveNumWithLeastCon).getOutputStream()); // used to send things
+		// to slave #'a'
+		System.out.println("created OOS for slave with least con"); // TODO for testing purposes
+		
+		ObjectInputStream inputFromSlave = new ObjectInputStream(
+			slaveSocketsList.get(slaveNumWithLeastCon).getInputStream()); // used to get things from
+		// slave #'a'
+		System.out.println("created OIS for slave with least con"); // TODO for testing purposes
 
-		System.out.println("read in"); // TODO for testing purposes
-
-		out.writeObject(task); // send the task to the slave
+		outputToSlave.writeObject(task); // send the task to the slave
 		System.out.println("wrote to slave"); // TODO for testing purposes
 
 		// TODO the following needs to be in a separate thread. It will block waiting
 		// for the slave to send it the completed task
-		task = (Thread) in.readObject(); // gets the completed task from the slave
-		System.out.println("got back task"); // TODO for testing purposes
+		task = (Thread) inputFromSlave.readObject(); // gets the completed task from the slave
+		System.out.println("got input back from slave"); // TODO for testing purposes
 		outputToClient.writeObject(task); // sends the completed task back to the client
-
-		System.out.println("running"); // TODO for testing purposes
+		System.out.println("Wrote to client !!---!!");
+		
 	    }
 
 	} catch (IOException | ClassNotFoundException e) {
@@ -81,8 +85,10 @@ public class MasterServerThread implements Runnable {
 	int temp = -1;
 	for (int i = 0; i < slaveSocketsList.size() && min != 0; i++) // for each slave
 	{
-	    ObjectOutputStream out = new ObjectOutputStream(slaveSocketsList.get(i).getOutputStream()); // used to send to slave
-	    ObjectInputStream in = new ObjectInputStream(slaveSocketsList.get(i).getInputStream()); // used to get from slave
+	    ObjectOutputStream out = new ObjectOutputStream(slaveSocketsList.get(i).getOutputStream()); // used to send
+													// to slave
+	    ObjectInputStream in = new ObjectInputStream(slaveSocketsList.get(i).getInputStream()); // used to get from
+												    // slave
 	    out.writeObject(0); // sending an int tells the slave to tell us how many tasks it has
 
 	    System.out.println("block"); // TODO for testing purposes
