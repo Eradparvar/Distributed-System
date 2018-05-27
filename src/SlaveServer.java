@@ -2,93 +2,82 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class SlaveServer
-{
-    public static void main(String[] args) throws IOException, ClassNotFoundException
-    {
+public class SlaveServer {
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
 
-	    // Hardcode in Port here if required
-	    args = new String[] { "localhost", "102"};
+	// Hardcode in Port here if required
+	args = new String[] { "localhost", "102" };
 
-	    if (args.length != 2)
+	if (args.length != 2) {
+	    System.err.println("Usage: java ClientServer <host name> <port number>");
+	    System.exit(1);
+	}
+
+	ArrayList<Socket> socksDir = new ArrayList<>(); // list of sockets used to return the completed task to
+							// MasterServerThread
+	ArrayList<Thread> tasks = new ArrayList<>(); // list of tasks to run
+
+	// this thread runs the tasks one by one
+	Thread runtasks = new Thread(new SlaveServerProcessTasksThread(socksDir, tasks));
+	runtasks.start();
+
+	// this while loop keeps getting tasks and adding them to the list, or getting
+	// requests for the number of tasks.
+	boolean runSlaveServer = true;
+	while (runSlaveServer) {
+	    try // should this be outside the while loop?
+
 	    {
-	    	System.err.println("Usage: java ClientServer <host name> <port number>");
-			System.exit(1);
-	    }
-	    
-		
-	    ArrayList<Socket> socks = new ArrayList<>();
-	    ArrayList<Thread> tasks = new ArrayList<>();
-	    
-	    
-	    Thread runtasks = new Thread(new SlaveServerProcessTasksThread(socks, tasks));
-	    runtasks.start();
-	   
-	    boolean run = true;
-	    while (run)
-	    {
-	    	try//(//ServerSocket serverSocketForTask = new ServerSocket(Integer.parseInt(args[0]));)
-			{
-	    		Socket s = new Socket(args[0], Integer.parseInt(args[1]));
-	    		
-		    	System.out.println("listening"); // TODO for testing purposes
-		    	
-				//Socket s = serverSocketForTask.accept();
-				
-				ObjectOutputStream out = new ObjectOutputStream(s.getOutputStream());
-				System.out.println("got output"); // TODO for testing purposes
-				ObjectInputStream inputFromClient = new ObjectInputStream(s.getInputStream());
-				System.out.println("got input"); // TODO for testing purposes
-				
-				
-				System.out.println("read object"); // TODO for testing purposes
-				Object temp = inputFromClient.readObject();
-				if(temp instanceof Thread)
-				{
-					System.out.println("add thread"); // TODO for testing purposes
-					//Socket tasksock = (Socket) inputFromClient.readObject();
-					synchronized(tasks)
-					{
-						tasks.add((Thread) temp);
-					}
-					System.out.println("add sock"); // TODO for testing purposes
-					synchronized(socks)
-					{
-						socks.add(s);
-					}
-				}
-				else
-				{
-					System.out.println("get least"); // TODO for testing purposes
-					synchronized(tasks)
-					{
-						out.writeObject(tasks.size());
-					}
-				}
+		Socket slaveSocket = new Socket(args[0], Integer.parseInt(args[1]));
+
+		System.out.println("listening"); // TODO for testing purposes
+
+		ObjectOutputStream out = new ObjectOutputStream(slaveSocket.getOutputStream()); // for sending the
+												// number of tasks
+		// to MasterServerThread
+		System.out.println("got outputStream"); // TODO for testing purposes
+		ObjectInputStream inputFromClient = new ObjectInputStream(slaveSocket.getInputStream()); // for getting
+													 // stuff from
+		// MasterServerThread
+		System.out.println("got inputStream"); // TODO for testing purposes
+
+		System.out.println("reading object"); // TODO for testing purposes
+		Object temp = inputFromClient.readObject(); // get a object from MasterServerThread
+		if (temp instanceof Thread) // if the object is a task
+		{
+		    System.out.println("add thread"); // TODO for testing purposes
+
+		    synchronized (tasks) {
+			tasks.add((Thread) temp); // add the thread to the list of threads we need to run
+			System.out.println("add sock"); // TODO for testing purposes
+			socksDir.add(slaveSocket); // add the socket so we know where to send the completed task
 		    }
-	    	catch (Exception e)
-			{
-			    // TODO: handle exception
-				e.printStackTrace();
-				System.exit(1);
-			}
-		}
-	    
-		try
+		} else // if the object is not a task, that means MasterServerThread wants the number
+		       // of tasks
 		{
-			for(int i=0; i<socks.size(); i++)
-			{
-				socks.get(i).close();
-			}
+		    System.out.println("get least"); // TODO for testing purposes
+		    synchronized (tasks) {
+			out.writeObject(tasks.size()); // send the number of tasks
+		    }
+		    System.out.println("Done get least");
 		}
-		catch (Exception e)
-		{
-		    // TODO Auto-generated catch block
-		    e.printStackTrace();
-		}
+	    } catch (Exception e) {
+		// TODO: handle exception
+		e.printStackTrace();
+		System.exit(1);
+	    }
+	}
+	try {
+	    // the following for loop closes resource leaks
+	    for (int i = 0; i < socksDir.size(); i++) {
+		socksDir.get(i).close();
+	    }
+	} catch (Exception e) {
+	    // TODO Auto-generated catch block
+	    e.printStackTrace();
+	}
     }
 }
